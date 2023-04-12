@@ -1,32 +1,25 @@
-// import logo from "./logo.svg";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./App.css";
 import Template from "./components/Template";
 import TodoList from "./components/TodoList";
 import { MdAddCircle } from "react-icons/md";
 import TodoInsert from "./components/TodoInsert";
+import axios from "axios";
 
 let nextId = 4;
 const App = () => {
   const [selectedTodo, setSelectedTodo] = useState(null);
   const [insertToggle, setInsertToggle] = useState(false);
-  const [todos, setTodos] = useState([
-    {
-      id: 1,
-      text: "할일1",
-      checked: true,
-    },
-    {
-      id: 2,
-      text: "할일2",
-      checked: false,
-    },
-    {
-      id: 3,
-      text: "할일3",
-      checked: true,
-    },
-  ]);
+  const [todos, setTodos] = useState([]);
+
+  useEffect(() => {
+    async function fetchData() {
+      const response = await axios.get("http://localhost:3001/todos");
+      setTodos(response.data);
+      nextId = response.data.length + 1;
+    }
+    fetchData();
+  }, []);
 
   const onInsertToggle = () => {
     if (selectedTodo) {
@@ -35,7 +28,7 @@ const App = () => {
     setInsertToggle((prev) => !prev);
   };
 
-  const onInsertTodo = (text) => {
+  const onInsertTodo = async (text) => {
     if (text === "") {
       return alert("일정을 입력해주세요.");
     } else {
@@ -44,12 +37,19 @@ const App = () => {
         text,
         checked: false,
       };
+      await axios.post("http://localhost:3001/todos", todo);
       setTodos((todos) => todos.concat(todo));
       nextId++;
     }
   };
 
-  const onCheckToggle = (id) => {
+  const onCheckToggle = async (id) => {
+    const todo = todos.find((todo) => todo.id === id);
+    const updatedTodo = {
+      ...todo,
+      checked: !todo.checked,
+    };
+    await axios.put(`http://localhost:3001/todos/${id}`, updatedTodo);
     setTodos((todos) =>
       todos.map((todo) =>
         todo.id === id ? { ...todo, checked: !todo.checked } : todo
@@ -61,13 +61,20 @@ const App = () => {
     setSelectedTodo(todo);
   };
 
-  const onRemove = (id) => {
+  const onRemove = async (id) => {
     onInsertToggle();
+    await axios.delete(`http://localhost:3001/todos/${id}`);
     setTodos((todos) => todos.filter((todo) => todo.id !== id));
   };
 
-  const onUpdate = (id, text) => {
+  const onUpdate = async (id, text) => {
     onInsertToggle();
+    const todo = todos.find((todo) => todo.id === id);
+    const updatedTodo = {
+      ...todo,
+      text,
+    };
+    await axios.put(`http://localhost:3001/todos/${id}`, updatedTodo);
     setTodos((todos) =>
       todos.map((todo) => (todo.id === id ? { ...todo, text } : todo))
     );
